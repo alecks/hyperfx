@@ -60,7 +60,7 @@ func New(ctx context.Context, logger *slog.Logger, options Options) (*Core, erro
 	// NOTE: this aims to never have a broken Core struct at any point, hence the verbosity
 
 	if options.TbAddresses == nil || options.PgUrl == "" || options.LocalCurrencyLedger == 0 {
-		return nil, errors.New("TB addresses, PG URL and local currency are required")
+		return nil, errors.New("core: TbAddresses, PgUrl and LocalCurrencyLedger are required")
 	}
 
 	if options.HfxDir == "" {
@@ -112,6 +112,7 @@ func (c *Core) Close() {
 
 // loadNamespace either gets the existing namespace from a file or generates a new one and writes it.
 func loadNamespace(options Options, logger *slog.Logger) (uuid.UUID, error) {
+	// TODO: not sure if the core should really do this, maybe leave it to the user
 	var namespace uuid.UUID
 	namespaceFilepath := filepath.Join(options.HfxDir, FILENAME_NAMESPACE)
 	namespaceBytes, err := os.ReadFile(namespaceFilepath)
