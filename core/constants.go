@@ -1,62 +1,82 @@
 package core
 
-// Tigerbeetle account codes
-const (
-	AccountCodeBranchLiquidity uint16 = 1000
-	AccountCodeBranchFees      uint16 = 1001
-	AccountCodeBranchOvers     uint16 = 2000
-	AccountCodeBranchShorts    uint16 = 2001
-	AccountCodeBranchControl   uint16 = 9000
+// HfxPrecision represents the decimal precision that should be used throughout the core.
+// TODO: make this configurable.
+const HfxPrecision = 9
 
-	AccountCodeCustomer uint16 = 3000
+// TradeDirection represents whether WE are buying a foreign currency from the customer or selling to the customer.
+// This is purely stored in PG for easy querying.
+type TradeDirection string
+
+const (
+	TradeBuy  TradeDirection = "BUY"
+	TradeSell TradeDirection = "SELL"
 )
 
-// Currency/ledger codes. Starting with a basic set from ISO 4217.
-const (
-	LedgerGBP uint32 = 826 // Great British Pound
-	LedgerUSD uint32 = 840 // United States Dollar
-	LedgerEUR uint32 = 978 // Euro
+// AccountCode represents a valid TB Account.code field (uint16).
+type AccountCode uint16
 
-	LedgerJPY uint32 = 392 // Japanese Yen
-	LedgerCAD uint32 = 124 // Canadian Dollar
-	LedgerAUD uint32 = 036 // Australian Dollar
-	LedgerCHF uint32 = 756 // Swiss Franc
-	LedgerCNY uint32 = 156 // Chinese Yuan Renminbi
-	LedgerHKD uint32 = 344 // Hong Kong Dollar
-	LedgerNZD uint32 = 554 // New Zealand Dollar
-	LedgerSEK uint32 = 752 // Swedish Krona
-	LedgerNOK uint32 = 578 // Norwegian Krone
-	LedgerDKK uint32 = 208 // Danish Krone
-	LedgerSGD uint32 = 702 // Singapore Dollar
-	LedgerINR uint32 = 356 // Indian Rupee
-	LedgerMXN uint32 = 484 // Mexican Peso
-	LedgerBRL uint32 = 986 // Brazilian Real
-	LedgerZAR uint32 = 710 // South African Rand
-	LedgerRUB uint32 = 643 // Russian Ruble
-	LedgerKRW uint32 = 410 // South Korean Won
-	LedgerTRY uint32 = 949 // Turkish Lira
-	LedgerPLN uint32 = 985 // Polish Zloty
-	LedgerTHB uint32 = 764 // Thai Baht
-	LedgerIDR uint32 = 360 // Indonesian Rupiah
-	LedgerMYR uint32 = 458 // Malaysian Ringgit
-	LedgerPHP uint32 = 608 // Philippine Peso
-	LedgerVND uint32 = 704 // Vietnamese Dong
-	LedgerEGP uint32 = 818 // Egyptian Pound
-	LedgerNGN uint32 = 566 // Nigerian Naira
-	LedgerKES uint32 = 404 // Kenyan Shilling
-	LedgerUAH uint32 = 980 // Ukrainian Hryvnia
-	LedgerCLP uint32 = 152 // Chilean Peso
-	LedgerCOP uint32 = 170 // Colombian Peso
-	LedgerPEN uint32 = 604 // Peruvian Sol
-	LedgerARS uint32 = 032 // Argentine Peso
-	LedgerSAR uint32 = 682 // Saudi Riyal
-	LedgerAED uint32 = 784 // UAE Dirham
-	LedgerKWD uint32 = 414 // Kuwaiti Dinar
-	LedgerQAR uint32 = 634 // Qatari Rial
+const (
+	AccountCodeBranchLiquidity AccountCode = 1000
+	AccountCodeBranchFees      AccountCode = 1001
+	AccountCodeBranchOvers     AccountCode = 2000
+	AccountCodeBranchShorts    AccountCode = 2001
+	AccountCodeBranchControl   AccountCode = 9000
+
+	AccountCodeCustomer AccountCode = 3000
 )
 
+// Ledger represents a valid currency for the TB Account.ledger field (uint32).
+type Ledger uint32
+
+// ISO 4217
+// TODO: maybe make this dynamic
+const (
+	LedgerGBP Ledger = 826 // Great British Pound
+	LedgerUSD Ledger = 840 // United States Dollar
+	LedgerEUR Ledger = 978 // Euro
+
+	LedgerJPY Ledger = 392  // Japanese Yen
+	LedgerCAD Ledger = 124  // Canadian Dollar
+	LedgerAUD Ledger = 0o36 // Australian Dollar
+	LedgerCHF Ledger = 756  // Swiss Franc
+	LedgerCNY Ledger = 156  // Chinese Yuan Renminbi
+	LedgerHKD Ledger = 344  // Hong Kong Dollar
+	LedgerNZD Ledger = 554  // New Zealand Dollar
+	LedgerSEK Ledger = 752  // Swedish Krona
+	LedgerNOK Ledger = 578  // Norwegian Krone
+	LedgerDKK Ledger = 208  // Danish Krone
+	LedgerSGD Ledger = 702  // Singapore Dollar
+	LedgerINR Ledger = 356  // Indian Rupee
+	LedgerMXN Ledger = 484  // Mexican Peso
+	LedgerBRL Ledger = 986  // Brazilian Real
+	LedgerZAR Ledger = 710  // South African Rand
+	LedgerRUB Ledger = 643  // Russian Ruble
+	LedgerKRW Ledger = 410  // South Korean Won
+	LedgerTRY Ledger = 949  // Turkish Lira
+	LedgerPLN Ledger = 985  // Polish Zloty
+	LedgerTHB Ledger = 764  // Thai Baht
+	LedgerIDR Ledger = 360  // Indonesian Rupiah
+	LedgerMYR Ledger = 458  // Malaysian Ringgit
+	LedgerPHP Ledger = 608  // Philippine Peso
+	LedgerVND Ledger = 704  // Vietnamese Dong
+	LedgerEGP Ledger = 818  // Egyptian Pound
+	LedgerNGN Ledger = 566  // Nigerian Naira
+	LedgerKES Ledger = 404  // Kenyan Shilling
+	LedgerUAH Ledger = 980  // Ukrainian Hryvnia
+	LedgerCLP Ledger = 152  // Chilean Peso
+	LedgerCOP Ledger = 170  // Colombian Peso
+	LedgerPEN Ledger = 604  // Peruvian Sol
+	LedgerARS Ledger = 0o32 // Argentine Peso
+	LedgerSAR Ledger = 682  // Saudi Riyal
+	LedgerAED Ledger = 784  // UAE Dirham
+	LedgerKWD Ledger = 414  // Kuwaiti Dinar
+	LedgerQAR Ledger = 634  // Qatari Rial
+)
+
+// CurrencyAssetScales represents how much the minor unit of a currency (stored in TB) needs to be scaled up to get to the usual 'display' unit.
 // See https://docs.tigerbeetle.com/coding/data-modeling/.
-var CurrencyAssetScales = map[uint32]uint8{
+var CurrencyAssetScales = map[Ledger]int32{
 	LedgerGBP: 2, // 1 GBP = 100 pence
 	LedgerUSD: 2, // 1 USD = 100 cents
 	LedgerEUR: 2, // 1 EUR = 100 cents
