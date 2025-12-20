@@ -57,6 +57,21 @@ func (c *Core) GetCustomerById(ctx context.Context, id uuid.UUID) (*Customer, er
 	return cust, err
 }
 
+// UpdateCustomerBlocked sets a customer's is_blocked flag and blocked_reason.
+func (c *Core) UpdateCustomerBlocked(
+	ctx context.Context,
+	id uuid.UUID,
+	isBlocked bool,
+	blockedReason string,
+) error {
+	_, err := c.pgc.Exec(
+		ctx,
+		"UPDATE customers SET is_blocked = $1, blocked_reason = $2 WHERE id = $3",
+		isBlocked, blockedReason, id,
+	)
+	return err
+}
+
 type CustomerLedgerAccount struct {
 	CustomerId  uuid.UUID
 	Ledger      uint32
