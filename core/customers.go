@@ -15,7 +15,8 @@ type Customer struct {
 	Address   string
 	Postcode  string
 
-	IsBlocked     bool
+	IsBlocked bool
+	// BlockedReason is nullable. Likely want to COALESCE with an empty string.
 	BlockedReason bool
 }
 
@@ -26,6 +27,7 @@ type CreateCustomerData struct {
 }
 
 // CreateCustomer inserts a customer into the PG database. It does not create a TB account.
+// TB accounts are created automatically when a transaction is made.
 func (c *Core) CreateCustomer(ctx context.Context, data CreateCustomerData) (*Customer, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
