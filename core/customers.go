@@ -64,7 +64,7 @@ type CustomerLedgerAccount struct {
 // AddCustomerLedgerAccount stores a customer's TB account ID for a certain ledger in PG.
 func (c *Core) AddCustomerLedgerAccount(ctx context.Context, data CustomerLedgerAccount) error {
 	// TODO: maybe add a helper function to make this look less awful
-	tbAccountUuid, err := uuid.FromBytes(data.TbAccountId[:])
+	tbAccountUuid, err := tbToUuid(data.TbAccountId)
 	if err != nil {
 		return err
 	}
@@ -77,4 +77,23 @@ func (c *Core) AddCustomerLedgerAccount(ctx context.Context, data CustomerLedger
 		tbAccountUuid,
 	)
 	return err
+}
+
+func (c *Core) GetCustomerLedgerAccount(
+	ctx context.Context,
+	customerId uuid.UUID,
+	ledger uint32,
+) (tbTypes.Uint128, error) {
+	var tbAccountUuid uuid.UUID
+
+	if err := c.pgc.QueryRow(
+		ctx,
+		"SELECT tb_account_id FROM customer_ledger_accounts WHERE customer_id = $1 AND ledger_id = $2",
+		customerId,
+		ledger,
+	).Scan(&tbAccountUuid); err != nil {
+		return tbTypes.Uint128{}, err
+	}
+
+	return uuidToTb(tbAccountUuid), nil
 }
