@@ -38,8 +38,9 @@ CREATE TABLE fx_trades (
     operator_id UUID NOT NULL REFERENCES operators(id),
 
     exchange_rate NUMERIC(18, 9) NOT NULL,
+    direction TEXT NOT NULL CHECK (trade_type IN ('BUY', 'SELL')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    notes TEXT,
+    notes TEXT NOT NULL,
     is_unusual BOOLEAN NOT NULL DEFAULT FALSE,
     unusual_reason TEXT
 );
