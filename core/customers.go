@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	tbTypes "github.com/tigerbeetle/tigerbeetle-go/pkg/types"
 )
 
 type Customer struct {
@@ -52,4 +53,28 @@ func (c *Core) GetCustomerById(ctx context.Context, id uuid.UUID) (*Customer, er
 		Scan(&cust.Id, &cust.FullName, &cust.CreatedAt, &cust.Address, &cust.Postcode, &cust.IsBlocked, &cust.BlockedReason)
 
 	return cust, err
+}
+
+type CustomerLedgerAccount struct {
+	CustomerId  uuid.UUID
+	Ledger      uint32
+	TbAccountId tbTypes.Uint128
+}
+
+// AddCustomerLedgerAccount stores a customer's TB account ID for a certain ledger in PG.
+func (c *Core) AddCustomerLedgerAccount(ctx context.Context, data CustomerLedgerAccount) error {
+	// TODO: maybe add a helper function to make this look less awful
+	tbAccountUuid, err := uuid.FromBytes(data.TbAccountId[:])
+	if err != nil {
+		return err
+	}
+
+	_, err = c.pgc.Exec(
+		ctx,
+		"INSERT INTO customer_ledger_accounts (customer_id, ledger_id, tb_account_id) VALUES ($1, $2, $3)",
+		data.CustomerId,
+		data.Ledger,
+		tbAccountUuid,
+	)
+	return err
 }
