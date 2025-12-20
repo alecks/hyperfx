@@ -13,14 +13,18 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	migratePgx "github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	tb "github.com/tigerbeetle/tigerbeetle-go"
 	tbTypes "github.com/tigerbeetle/tigerbeetle-go/pkg/types"
 )
 
-const FILENAME_HFX_DIR = ".hyperfx"
-const FILENAME_NAMESPACE = "namespace"
+const (
+	FILENAME_HFX_DIR   = ".hyperfx"
+	FILENAME_NAMESPACE = "namespace"
+)
 
 //go:embed migrations/*.sql
 var migrationsFs embed.FS
@@ -59,14 +63,18 @@ type knownIds struct {
 func New(ctx context.Context, logger *slog.Logger, options Options) (*Core, error) {
 	// NOTE: this aims to never have a broken Core struct at any point, hence the verbosity
 
-	if options.TbAddresses == nil || options.PgUrl == "" || options.LocalCurrencyLedger == 0 {
+	if options.TbAddresses == nil || options.PgUrl == "" ||
+		options.LocalCurrencyLedger == 0 {
 		return nil, errors.New("core: TbAddresses, PgUrl and LocalCurrencyLedger are required")
 	}
 
 	if options.HfxDir == "" {
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			return nil, fmt.Errorf("core: failed to get user home dir: %w. Specify Options.HfxDir to override use of home directory", err)
+			return nil, fmt.Errorf(
+				"core: failed to get user home dir: %w. Specify Options.HfxDir to override use of home directory",
+				err,
+			)
 		}
 		options.HfxDir = filepath.Join(homeDir, FILENAME_HFX_DIR)
 	}
@@ -119,18 +127,30 @@ func loadNamespace(options Options, logger *slog.Logger) (uuid.UUID, error) {
 
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			os.Mkdir(options.HfxDir, 0700)
+			os.Mkdir(options.HfxDir, 0o700)
 			namespace, err = uuid.NewV4()
 			if err != nil {
 				return uuid.Nil, err
 			}
-			if err := os.WriteFile(namespaceFilepath, namespace.Bytes(), 0600); err != nil {
-				return uuid.Nil, fmt.Errorf("core: failed to write namespace file (check permissions?): %w", err)
+			if err := os.WriteFile(namespaceFilepath, namespace.Bytes(), 0o600); err != nil {
+				return uuid.Nil, fmt.Errorf(
+					"core: failed to write namespace file (check permissions?): %w",
+					err,
+				)
 			}
 
-			logger.Warn("namespace file did not exist, new namespace generated and written", "filepath", namespaceFilepath, "namespace", namespace.String())
+			logger.Warn(
+				"namespace file did not exist, new namespace generated and written",
+				"filepath",
+				namespaceFilepath,
+				"namespace",
+				namespace.String(),
+			)
 		} else {
-			return uuid.Nil, fmt.Errorf("core: failed to read namespace file (check permissions?): %w", err)
+			return uuid.Nil, fmt.Errorf(
+				"core: failed to read namespace file (check permissions?): %w",
+				err,
+			)
 		}
 	} else {
 		namespace, err = uuid.FromBytes(namespaceBytes)
@@ -138,31 +158,74 @@ func loadNamespace(options Options, logger *slog.Logger) (uuid.UUID, error) {
 			return uuid.Nil, err
 		}
 
-		logger.Info("existing namespace file found", "filepath", namespaceFilepath, "namespace", namespace.String())
+		logger.Info(
+			"existing namespace file found",
+			"filepath",
+			namespaceFilepath,
+			"namespace",
+			namespace.String(),
+		)
 	}
 
 	return namespace, nil
 }
 
 // connectDatabases creates TB and PG clients and tests connection. This function will close database connections itself on error.
-func connectDatabases(ctx context.Context, options Options, logger *slog.Logger) (tb.Client, *pgxpool.Pool, error) {
+func connectDatabases(
+	ctx context.Context,
+	options Options,
+	logger *slog.Logger,
+) (tb.Client, *pgxpool.Pool, error) {
+	logger.Debug(
+		"creating TB client",
+		"cluster_id",
+		options.TbClusterId,
+		"addresses",
+		options.TbAddresses,
+	)
 	tbc, err := tb.NewClient(options.TbClusterId, options.TbAddresses)
 	if err != nil {
 		return nil, nil, fmt.Errorf("core: failed to create TB client: %w", err)
 	}
 
+	logger.Debug(
+		"performing TB Nop request",
+		"cluster_id",
+		options.TbClusterId,
+		"addresses",
+		options.TbAddresses,
+	)
 	if err := tbc.Nop(); err != nil {
 		tbc.Close()
 		return nil, nil, fmt.Errorf("core: failed to send Nop to TB: %w", err)
 	}
-	logger.Info("TB connection is UP", "cluster_id", options.TbClusterId, "addresses", options.TbAddresses)
+	logger.Info(
+		"TB connection is UP",
+		"cluster_id",
+		options.TbClusterId,
+		"addresses",
+		options.TbAddresses,
+	)
 
-	pgc, err := pgxpool.New(ctx, options.PgUrl)
+	logger.Debug("creating PG pool", "url", options.PgUrl)
+	pgConf, err := pgxpool.ParseConfig(options.PgUrl)
+	if err != nil {
+		tbc.Close()
+		return nil, nil, fmt.Errorf("core: failed to parse PG url: %w", err)
+	}
+	// Allow pgx to be used with gofrs UUID.
+	pgConf.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		pgxuuid.Register(conn.TypeMap())
+		return nil
+	}
+
+	pgc, err := pgxpool.NewWithConfig(ctx, pgConf)
 	if err != nil {
 		tbc.Close()
 		return nil, nil, fmt.Errorf("core: failed to create PG connection pool: %w", err)
 	}
 
+	logger.Debug("pinging PG", "url", options.PgUrl)
 	if err := pgc.Ping(ctx); err != nil {
 		tbc.Close()
 		pgc.Close()
@@ -171,7 +234,6 @@ func connectDatabases(ctx context.Context, options Options, logger *slog.Logger)
 
 	logger.Info("PG connection is UP", "url", options.PgUrl)
 	return tbc, pgc, nil
-
 }
 
 // migratePg runs migrations on an existing postgres pool.
@@ -210,7 +272,12 @@ func migratePg(ctx context.Context, pgc *pgxpool.Pool, logger *slog.Logger) erro
 }
 
 // initSystemAccounts gets Tigerbeetle system account IDs and ensures system accounts exist.
-func initSystemAccounts(options Options, namespace uuid.UUID, tbc tb.Client, logger *slog.Logger) (*knownIds, error) {
+func initSystemAccounts(
+	options Options,
+	namespace uuid.UUID,
+	tbc tb.Client,
+	logger *slog.Logger,
+) (*knownIds, error) {
 	ids := &knownIds{
 		liquidity: map[uint32]tbTypes.Uint128{},
 		overs:     map[uint32]tbTypes.Uint128{},
@@ -301,14 +368,38 @@ func initSystemAccounts(options Options, namespace uuid.UUID, tbc tb.Client, log
 		case tbTypes.AccountExists:
 			// NOTE: there are other exists errors, but these would only occur if we changed the code, flags or user_data, or mismatched the ledger.
 			exists++
-			logger.Debug("account creation: exists", "id", account.ID, "ledger", account.Ledger, "code", account.Code)
+			logger.Debug(
+				"account creation: exists",
+				"id",
+				account.ID,
+				"ledger",
+				account.Ledger,
+				"code",
+				account.Code,
+			)
 		default:
 			failures++
-			logger.Error("account creation: "+e.Result.String(), "id", account.ID, "ledger", account.Ledger, "code", account.Code)
+			logger.Error(
+				"account creation: "+e.Result.String(),
+				"id",
+				account.ID,
+				"ledger",
+				account.Ledger,
+				"code",
+				account.Code,
+			)
 		}
 	}
 
-	logger.Info("account creation requests complete, TB ready for operation", "total_requests", len(accountCreationBatch), "exists_occurences", exists, "failure_occurences", failures)
+	logger.Info(
+		"account creation requests complete, TB ready for operation",
+		"total_requests",
+		len(accountCreationBatch),
+		"exists_occurences",
+		exists,
+		"failure_occurences",
+		failures,
+	)
 
 	return ids, nil
 }
