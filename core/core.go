@@ -410,3 +410,12 @@ func idWithNamespace(namespace uuid.UUID, name string) tbTypes.Uint128 {
 	idBytes := [16]byte(uuid.NewV5(namespace, name).Bytes())
 	return tbTypes.BytesToUint128(idBytes)
 }
+
+// uuidToTb converts a uuid.UUID to a tbTypes.Uint128.
+func uuidToTb(u uuid.UUID) tbTypes.Uint128 {
+	return tbTypes.BytesToUint128([16]byte(u.Bytes()))
+}
+
+func tbToUuid(i tbTypes.Uint128) (uuid.UUID, error) {
+	return uuid.FromBytes(i[:])
+}
