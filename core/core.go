@@ -10,13 +10,17 @@ import (
 	"path/filepath"
 
 	"github.com/gofrs/uuid"
+
 	"github.com/golang-migrate/migrate/v4"
 	migratePgx "github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
+
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+
 	tb "github.com/tigerbeetle/tigerbeetle-go"
 	tbTypes "github.com/tigerbeetle/tigerbeetle-go/pkg/types"
 )
@@ -213,9 +217,11 @@ func connectDatabases(
 		tbc.Close()
 		return nil, nil, fmt.Errorf("core: failed to parse PG url: %w", err)
 	}
-	// Allow pgx to be used with gofrs UUID.
+	// Allow pgx to be used with gofrs UUID and shopspring decimals.
 	pgConf.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		pgxuuid.Register(conn.TypeMap())
+		typeMap := conn.TypeMap()
+		pgxuuid.Register(typeMap)
+		pgxdecimal.Register(typeMap)
 		return nil
 	}
 
