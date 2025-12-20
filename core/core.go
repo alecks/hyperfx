@@ -50,15 +50,15 @@ type Options struct {
 	PgUrl string
 
 	HfxDir              string
-	LocalCurrencyLedger uint32
+	LocalCurrencyLedger Ledger
 }
 
 type knownIds struct {
 	// Map from currency code to account ID
-	liquidity map[uint32]tbTypes.Uint128
-	overs     map[uint32]tbTypes.Uint128
-	shorts    map[uint32]tbTypes.Uint128
-	control   map[uint32]tbTypes.Uint128
+	liquidity map[Ledger]tbTypes.Uint128
+	overs     map[Ledger]tbTypes.Uint128
+	shorts    map[Ledger]tbTypes.Uint128
+	control   map[Ledger]tbTypes.Uint128
 	fees      tbTypes.Uint128 // Only local currency
 }
 
@@ -285,10 +285,10 @@ func initSystemAccounts(
 	logger *slog.Logger,
 ) (*knownIds, error) {
 	ids := &knownIds{
-		liquidity: map[uint32]tbTypes.Uint128{},
-		overs:     map[uint32]tbTypes.Uint128{},
-		shorts:    map[uint32]tbTypes.Uint128{},
-		control:   map[uint32]tbTypes.Uint128{},
+		liquidity: map[Ledger]tbTypes.Uint128{},
+		overs:     map[Ledger]tbTypes.Uint128{},
+		shorts:    map[Ledger]tbTypes.Uint128{},
+		control:   map[Ledger]tbTypes.Uint128{},
 	}
 	accountCreationBatch := []tbTypes.Account{}
 
@@ -300,8 +300,8 @@ func initSystemAccounts(
 		ids.liquidity[currCode] = liqId
 		accountCreationBatch = append(accountCreationBatch, tbTypes.Account{
 			ID:     liqId,
-			Ledger: currCode,
-			Code:   AccountCodeBranchLiquidity,
+			Ledger: uint32(currCode),
+			Code:   uint16(AccountCodeBranchLiquidity),
 			Flags: tbTypes.AccountFlags{
 				History: true,
 			}.ToUint16(),
@@ -313,8 +313,8 @@ func initSystemAccounts(
 		ids.overs[currCode] = oversId
 		accountCreationBatch = append(accountCreationBatch, tbTypes.Account{
 			ID:     oversId,
-			Ledger: currCode,
-			Code:   AccountCodeBranchOvers,
+			Ledger: uint32(currCode),
+			Code:   uint16(AccountCodeBranchOvers),
 			Flags: tbTypes.AccountFlags{
 				DebitsMustNotExceedCredits: true,
 				History:                    true,
@@ -327,8 +327,8 @@ func initSystemAccounts(
 		ids.shorts[currCode] = shortsId
 		accountCreationBatch = append(accountCreationBatch, tbTypes.Account{
 			ID:     shortsId,
-			Ledger: currCode,
-			Code:   AccountCodeBranchShorts,
+			Ledger: uint32(currCode),
+			Code:   uint16(AccountCodeBranchShorts),
 			Flags: tbTypes.AccountFlags{
 				CreditsMustNotExceedDebits: true,
 				History:                    true,
@@ -341,8 +341,8 @@ func initSystemAccounts(
 		ids.control[currCode] = controlId
 		accountCreationBatch = append(accountCreationBatch, tbTypes.Account{
 			ID:     controlId,
-			Ledger: currCode,
-			Code:   AccountCodeBranchControl,
+			Ledger: uint32(currCode),
+			Code:   uint16(AccountCodeBranchControl),
 			Flags: tbTypes.AccountFlags{
 				History: true,
 			}.ToUint16(),
@@ -353,8 +353,8 @@ func initSystemAccounts(
 	feesId := idWithNamespace(namespace, "branch_fees")
 	accountCreationBatch = append(accountCreationBatch, tbTypes.Account{
 		ID:     feesId,
-		Ledger: options.LocalCurrencyLedger,
-		Code:   AccountCodeBranchFees,
+		Ledger: uint32(options.LocalCurrencyLedger),
+		Code:   uint16(AccountCodeBranchFees),
 		Flags: tbTypes.AccountFlags{
 			DebitsMustNotExceedCredits: true,
 			History:                    true,
