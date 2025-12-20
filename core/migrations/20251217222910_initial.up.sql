@@ -1,10 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE operators (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL, 
-    full_name TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
@@ -12,11 +11,11 @@ CREATE TABLE operators (
 CREATE INDEX idx_operators_username ON operators(username);
 
 CREATE TABLE customers (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY,
     full_name TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    address TEXT,
-    postcode TEXT,
+    address TEXT NOT NULL,
+    postcode TEXT NOT NULL,
     is_blocked BOOLEAN NOT NULL DEFAULT FALSE,
     blocked_reason TEXT
 );
@@ -104,7 +103,7 @@ CREATE INDEX idx_ledger_adjustments_operator ON ledger_adjustments(operator_id);
 CREATE INDEX idx_ledger_adjustments_date ON ledger_adjustments(created_at DESC);
 
 CREATE TABLE midday_counts (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY,
     ledger_id INT NOT NULL,
     operator_id UUID NOT NULL REFERENCES operators(id),
     ledger_balance_at_count BIGINT NOT NULL, 
